@@ -20,6 +20,7 @@ import type {
   Language,
   Timezone,
 } from './types';
+import { useDebounce } from '@/hooks/useDebounce';
 import { getExportSnippet, buildQueryParams } from './utils';
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -54,6 +55,7 @@ function CustomizePageInner(): ReactElement {
   const [svgState, setSvgState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const trimmedUsername = username.trim();
+  const debouncedUsername = useDebounce(trimmedUsername, 400);
   const hasUsername = trimmedUsername.length > 0;
   const isRandomTheme = theme === 'random';
 
@@ -146,7 +148,32 @@ function CustomizePageInner(): ReactElement {
     language,
     timezone,
   });
-  const previewSrc = `/api/streak?${queryString}`;
+
+  const previewQueryString = buildQueryParams({
+    username: debouncedUsername,
+    theme,
+    bgHex,
+    accentHex,
+    textHex,
+    scale,
+    speed,
+    font,
+    year,
+    radius,
+    size,
+    hideTitle,
+    hideBackground,
+    hideStats,
+    viewMode,
+    deltaFormat,
+    badgeWidth,
+    badgeHeight,
+    grace,
+    language,
+    timezone,
+  });
+
+  const previewSrc = `/api/streak?${previewQueryString}`;
 
   // On change sync state to URL
   useEffect(() => {
@@ -162,7 +189,7 @@ function CustomizePageInner(): ReactElement {
       setSvgState('idle');
       return;
     }
-    if (!validateGitHubUsername(trimmedUsername)) {
+    if (!validateGitHubUsername(debouncedUsername)) {
       setSvgContent('');
       setSvgState('error');
       setErrorMessage("That doesn't look like a valid GitHub username");
@@ -239,7 +266,7 @@ function CustomizePageInner(): ReactElement {
       });
 
     return () => controller.abort();
-  }, [previewSrc, hasUsername, trimmedUsername]);
+  }, [previewSrc, hasUsername, debouncedUsername]);
 
   const exportSnippet = getExportSnippet(exportFormat, queryString);
 
